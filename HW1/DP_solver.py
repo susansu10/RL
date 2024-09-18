@@ -203,25 +203,43 @@ class ValueIteration(DynamicProgramming):
             float
         """
         # TODO: Get the value for a state by calculating the q-values
-        v_state_value = 0.0
+        v_state_value = -float('inf')
         for action in range(self.grid_world.get_action_space()):
-            v_state_value += self.policy[state][action] * self.get_q_value(state, action)        
+            v_state_value = max(v_state_value, self.get_q_value(state, action))      
         return v_state_value
 
     def policy_evaluation(self):
         """Evaluate the policy and update the values"""
         # TODO: Implement the policy evaluation step
-        raise NotImplementedError
+        v_update_value = np.zeros(self.grid_world.get_state_space())
+        for state in range(self.grid_world.get_state_space()):
+            v_update_value[state] = self.get_state_value(state)
+        return v_update_value
 
     def policy_improvement(self):
         """Improve the policy based on the evaluated values"""
         # TODO: Implement the policy improvement step
-        raise NotImplementedError
+        for state in range(self.grid_world.get_state_space()):
+            new_action = np.zeros(self.grid_world.get_action_space())
+            
+            for action in range(self.grid_world.get_action_space()):
+                new_action[action] = self.get_q_value(state, action) 
+                
+            new_action_index = np.argmax(new_action)
+            self.policy[state] = new_action_index
+            
 
     def run(self) -> None:
         """Run the algorithm until convergence"""
         # TODO: Implement the value iteration algorithm until convergence
-        raise NotImplementedError
+        
+        diff = 1
+        while diff > self.threshold:
+            v_update_value = self.policy_evaluation()
+            diff = max(abs(self.values - v_update_value))
+            self.values = v_update_value
+            
+        self.policy_improvement()
 
 
 class AsyncDynamicProgramming(DynamicProgramming):
