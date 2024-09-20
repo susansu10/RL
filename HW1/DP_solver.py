@@ -252,7 +252,85 @@ class AsyncDynamicProgramming(DynamicProgramming):
         """
         super().__init__(grid_world, discount_factor)
 
+    def get_state_value(self, state: int) -> float:
+        """Get the value for a state
+
+        Args:
+            state (int)
+
+        Returns:
+            float
+        """
+        # TODO: Get the value for a state by calculating the q-values
+        v_state_value = -float('inf')
+        for action in range(self.grid_world.get_action_space()):
+            v_state_value = max(v_state_value, self.get_q_value(state, action))      
+        return v_state_value 
+    
+    def policy_evaluation(self):
+        """Evaluate the policy and update the values"""
+        # TODO: Implement the policy evaluation step
+        for state in range(self.grid_world.get_state_space()):
+            self.values[state] = self.get_state_value(state)
+    
+    def policy_improvement(self):
+        """Improve the policy based on the evaluated values"""
+        # TODO: Implement the policy improvement step
+        for state in range(self.grid_world.get_state_space()):
+            new_action = np.zeros(self.grid_world.get_action_space())
+            
+            for action in range(self.grid_world.get_action_space()):
+                new_action[action] = self.get_q_value(state, action) 
+                
+            new_action_index = np.argmax(new_action)
+            self.policy[state] = new_action_index
+    
+    # task3 - inplace
+    '''
+    Async Dynamic Programming
+    Solved in 1056 steps
+    Start state: 0, End state: 21
+    '''
+    # def run(self) -> None:
+    #     """Run the algorithm until convergence"""
+    #     # TODO: Implement the async dynamic programming algorithm until convergence
+        
+    #     diff = 1
+    #     while diff > self.threshold:
+    #         v_old = self.values.copy()
+    #         self.policy_evaluation()
+    #         diff = max(abs(self.values - v_old))
+            
+    #     self.policy_improvement()
+    
+    def policy_evaluation_priority_sweeping(self):
+        """Evaluate the policy and update the values"""
+        # TODO: Implement the policy evaluation step
+        
+        v_update_value = np.zeros(self.grid_world.get_state_space())
+        for state in range(self.grid_world.get_state_space()):
+            v_update_value[state] = self.get_state_value(state)
+        
+        v_next_old = []
+        for state in range(self.grid_world.get_state_space()):
+            v_next_old.append((state, v_update_value[state], self.values[state]))
+        
+        # sort by v_next - v_old
+        v_next_old_sorted = sorted(v_next_old, key=lambda x: x[1]-x[2], reverse=False)
+        # print(v_next_old_sorted)
+        
+        # inplace
+        for state, next, old in v_next_old_sorted:
+            self.values[state] = next
+    
     def run(self) -> None:
         """Run the algorithm until convergence"""
         # TODO: Implement the async dynamic programming algorithm until convergence
-        raise NotImplementedError
+        
+        diff = 1
+        while diff > self.threshold:
+            v_old = self.values.copy()
+            self.policy_evaluation_priority_sweeping()
+            diff = max(abs(self.values - v_old))
+            
+        self.policy_improvement()
