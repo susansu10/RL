@@ -71,9 +71,34 @@ class MonteCarloPrediction(ModelFreePrediction):
         """Run the algorithm until max_episode"""
         # TODO: Update self.values with first-visit Monte-Carlo method
         current_state = self.grid_world.reset()
+        
+        episode = []
+        # s => list of Gt
+        returns = [[] for idx in range(self.state_space)]        
+        
         while self.episode_counter < self.max_episode:
+            # collect the episode data
             next_state, reward, done = self.collect_data()
-            continue
+            episode.append((current_state, reward))
+            current_state = next_state
+            
+            if done:                
+                # cache the first-visit
+                first_visit_update = {}
+                G = 0.0
+                for i in range(len(episode)-1, -1, -1):
+                    state, reward = episode[i]
+                    G = self.discount_factor * G + reward
+                    # first-visit in reverse order
+                    first_visit_update[state] = G
+                
+                # update the state value
+                for state, value in first_visit_update.items():
+                    returns[state].append(value)
+                    self.values[state] = sum(returns[state]) / len(returns[state])
+                
+                episode = []
+                
 
 
 class TDPrediction(ModelFreePrediction):
