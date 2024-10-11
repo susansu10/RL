@@ -120,9 +120,18 @@ class TDPrediction(ModelFreePrediction):
         """Run the algorithm until max episode"""
         # TODO: Update self.values with TD(0) Algorithm
         current_state = self.grid_world.reset()
+        
         while self.episode_counter < self.max_episode:
             next_state, reward, done = self.collect_data()
-            continue
+            
+            td_target = reward
+            if done == False:
+                td_target += self.discount_factor * self.values[next_state]
+                
+            self.values[current_state] = self.values[current_state] + self.lr * (td_target - self.values[current_state])
+            current_state = next_state
+            
+            
 
 
 class NstepTDPrediction(ModelFreePrediction):

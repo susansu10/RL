@@ -212,8 +212,8 @@ if __name__ == "__main__":
     seed = 1
     grid_world = init_grid_world("maze.txt",INIT_POS)
     # 2-1
-    run_MC_prediction(grid_world,seed)
-    # run_TD_prediction(grid_world,seed)
+    # run_MC_prediction(grid_world,seed)
+    run_TD_prediction(grid_world,seed)
     # run_NstepTD_prediction(grid_world,seed)
 
     # 2-2
