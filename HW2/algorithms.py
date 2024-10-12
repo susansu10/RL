@@ -301,23 +301,25 @@ class SARSA(ModelFreeControl):
         
         self.rng = np.random.default_rng(1)
 
+    def get_policy(self, state: int) -> int:
+        """Get the policy based on epsilon-greedy"""
+        best_q_i = self.q_values[state].argmax()
+        for action in range(self.action_space):
+            if action == best_q_i:
+                self.policy[state][action] = 1 - self.epsilon + self.epsilon/self.action_space
+            else:
+                self.policy[state][action] = self.epsilon/self.action_space
+        return self.policy[state]
+    
     def policy_eval_improve(self, s, a, r, s2, a2, is_done) -> None:
         """Evaluate the policy and update the values after one step"""
         # TODO: Evaluate Q value after one step and improve the policy
         
-        # eval
+        # eval and update
         q_target = r
         if is_done == False:
             q_target += self.discount_factor * self.q_values[s2][a2]
         self.q_values[s][a] = self.q_values[s][a] + self.lr * (q_target - self.q_values[s][a])
-
-        # improve
-        best_q_i = self.q_values[s].argmax()
-        for action in range(self.action_space):
-            if action == best_q_i:
-                self.policy[s][action] = 1 - self.epsilon + self.epsilon/self.action_space
-            else:
-                self.policy[s][action] = self.epsilon/self.action_space
 
     def run(self, max_episode=1000) -> None:
         """Run the algorithm until convergence."""
@@ -325,7 +327,7 @@ class SARSA(ModelFreeControl):
         iter_episode = 0
         current_state = self.grid_world.reset()
 
-        action_probs = self.policy[current_state]  
+        action_probs = self.get_policy(current_state)  
         current_action = self.rng.choice(self.action_space, p=action_probs)  
         
         while iter_episode < max_episode:
@@ -333,7 +335,7 @@ class SARSA(ModelFreeControl):
             # hint: self.grid_world.reset() is NOT needed here
             
             next_state, reward, done = self.grid_world.step(current_action) 
-            next_action = self.rng.choice(self.action_space, p=self.policy[next_state])  
+            next_action = self.rng.choice(self.action_space, p=self.get_policy(next_state))  
             
             self.policy_eval_improve(current_state, current_action, reward, next_state, next_action, done)
             current_state = next_state
