@@ -155,9 +155,24 @@ class NstepTDPrediction(ModelFreePrediction):
         """Run the algorithm until max_episode"""
         # TODO: Update self.values with N-step TD Algorithm
         current_state = self.grid_world.reset()
+        
+        episode = []
         while self.episode_counter < self.max_episode:
             next_state, reward, done = self.collect_data()
-            continue
+            episode.append((current_state, reward))
+            current_state = next_state
+            
+            if done:
+                # n-step look ahead
+                for idx, (state, reward) in enumerate(episode):
+                    G = 0.0
+                    for j in range(idx, min(idx+self.n, len(episode))):
+                        G += (self.discount_factor ** (j-idx)) * episode[j][1]
+                    if idx + self.n < len(episode):
+                        G += (self.discount_factor ** self.n) * self.values[episode[idx+self.n][0]]
+                    td_error = (G - self.values[state])
+                    self.values[state] = self.values[state] + self.lr * td_error
+                episode = []
 
 # =========================== 2.2 model free control ===========================
 class ModelFreeControl:
@@ -211,19 +226,34 @@ class MonteCarloPolicyIteration(ModelFreeControl):
         super().__init__(grid_world, discount_factor)
         self.lr      = learning_rate
         self.epsilon = epsilon
+        
+        self.rng = np.random.default_rng(1)
 
     def policy_evaluation(self, state_trace, action_trace, reward_trace) -> None:
         """Evaluate the policy and update the values after one episode"""
         # TODO: Evaluate state value for each Q(s,a)
         
-        raise NotImplementedError
+        G = 0.0
+        for i in range(len(state_trace)-1, -1, -1):
+            state, action, reward = state_trace[i], action_trace[i], reward_trace[i]
+            G = self.discount_factor * G + reward
+            # every visit
+            self.q_values[state][action] = self.q_values[state][action] + self.lr * (G - self.q_values[state][action])
         
 
     def policy_improvement(self) -> None:
         """Improve policy based on Q(s,a) after one episode"""
         # TODO: Improve the policy
-
-        raise NotImplementedError
+        
+        # get max Q value index of each state
+        self.get_policy_index()
+        # update the policy
+        for state in range(self.state_space):
+            for action in range(self.action_space):
+                if action == self.policy_index[state]:
+                    self.policy[state][action] = 1 - self.epsilon + self.epsilon/self.action_space
+                else:
+                    self.policy[state][action] = self.epsilon/self.action_space
 
 
     def run(self, max_episode=1000) -> None:
@@ -231,15 +261,28 @@ class MonteCarloPolicyIteration(ModelFreeControl):
         # TODO: Implement the Monte Carlo policy evaluation with epsilon-greedy
         iter_episode = 0
         current_state = self.grid_world.reset()
-        state_trace   = [current_state]
+        
+        state_trace   = []
         action_trace  = []
         reward_trace  = []
         while iter_episode < max_episode:
             # TODO: write your code here
             # hint: self.grid_world.reset() is NOT needed here
             
-            raise NotImplementedError
-
+            # collect episode
+            action_probs = self.policy[current_state]  
+            action = self.rng.choice(self.action_space, p=action_probs)  
+            next_state, reward, done = self.grid_world.step(action) 
+            state_trace.append(current_state)
+            action_trace.append(action)
+            reward_trace.append(reward)
+            current_state = next_state
+            
+            if done:
+                self.policy_evaluation(state_trace, action_trace, reward_trace)
+                self.policy_improvement()
+                state_trace, action_trace, reward_trace = [], [], []
+                iter_episode += 1
 
 class SARSA(ModelFreeControl):
     def __init__(
@@ -255,27 +298,50 @@ class SARSA(ModelFreeControl):
         super().__init__(grid_world, discount_factor)
         self.lr      = learning_rate
         self.epsilon = epsilon
+        
+        self.rng = np.random.default_rng(1)
 
     def policy_eval_improve(self, s, a, r, s2, a2, is_done) -> None:
         """Evaluate the policy and update the values after one step"""
         # TODO: Evaluate Q value after one step and improve the policy
         
-        raise NotImplementedError
+        # eval
+        q_target = r
+        if is_done == False:
+            q_target += self.discount_factor * self.q_values[s2][a2]
+        self.q_values[s][a] = self.q_values[s][a] + self.lr * (q_target - self.q_values[s][a])
+
+        # improve
+        best_q_i = self.q_values[s].argmax()
+        for action in range(self.action_space):
+            if action == best_q_i:
+                self.policy[s][action] = 1 - self.epsilon + self.epsilon/self.action_space
+            else:
+                self.policy[s][action] = self.epsilon/self.action_space
 
     def run(self, max_episode=1000) -> None:
         """Run the algorithm until convergence."""
         # TODO: Implement the TD policy evaluation with epsilon-greedy
         iter_episode = 0
         current_state = self.grid_world.reset()
-        prev_s = None
-        prev_a = None
-        prev_r = None
-        is_done = False
+
+        action_probs = self.policy[current_state]  
+        current_action = self.rng.choice(self.action_space, p=action_probs)  
+        
         while iter_episode < max_episode:
             # TODO: write your code here
             # hint: self.grid_world.reset() is NOT needed here
             
-            raise NotImplementedError
+            next_state, reward, done = self.grid_world.step(current_action) 
+            next_action = self.rng.choice(self.action_space, p=self.policy[next_state])  
+            
+            self.policy_eval_improve(current_state, current_action, reward, next_state, next_action, done)
+            current_state = next_state
+            current_action = next_action
+            
+            if done:
+                iter_episode += 1
+            
 
 class Q_Learning(ModelFreeControl):
     def __init__(
