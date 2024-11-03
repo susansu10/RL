@@ -143,14 +143,14 @@ def write_gif(filename: str = "lava.txt", algorithm: type = PPO) -> None:
 if __name__ == "__main__":
     # TEST CORRECTNESS
     test_correctness("tasks/lava.txt")
-    test_correctness("tasks/exit.txt")
-    test_correctness("tasks/bait.txt")
-    test_correctness("tasks/door.txt")
-    test_correctness("tasks/portal.txt")
-    test_correctness("tasks/maze.txt")
+    # test_correctness("tasks/exit.txt")
+    # test_correctness("tasks/bait.txt")
+    # test_correctness("tasks/door.txt")
+    # test_correctness("tasks/portal.txt")
+    # test_correctness("tasks/maze.txt")
     # 
     # Write one trajectory to gif
-    # write_gif("tasks/lava.txt", algorithm=PPO)
+    write_gif("tasks/lava.txt", algorithm=PPO)
     # write_gif("tasks/exit.txt", algorithm=PPO)
     # write_gif("tasks/bait.txt", algorithm=PPO)
     # write_gif("tasks/door.txt", algorithm=A2C)

@@ -438,7 +438,30 @@ class GridWorld:
             tuple: next_state, reward, done, truncation
         """
         # TODO implement the step function here
-        raise NotImplementedError
+        
+        self._step_count += 1
+        truncated = bool(self._step_count > self.max_step)
+
+        state_coord = self._state_list[self._current_state]
+        if self._is_goal_state(state_coord):
+            next_init_state = self.reset()
+            return next_init_state, self._goal_reward, True, truncated
+        if self._is_trap_state(state_coord):
+            next_init_state = self.reset()
+            return next_init_state, self._trap_reward, True, truncated
+        if self._is_exit_state(state_coord):
+            next_init_state = self.reset()
+            return self._current_state, self._exit_reward, True, truncated
+        if self._is_lava_state(state_coord):
+            next_init_state = self.reset()
+            return next_init_state, self.step_reward, True, truncated
+
+        # empty state
+        next_state_coord = self._get_next_state(state_coord, action)
+        next_state = self._state_list.index(next_state_coord)
+        self._current_state = next_state
+
+        return next_state, self.step_reward, False, truncated
 
     def reset(self) -> int:
         """Reset the environment
@@ -447,7 +470,10 @@ class GridWorld:
             int: initial state
         """
         # TODO implement the reset function here
-        raise NotImplementedError
+        self._current_state = self._init_states[np.random.randint(len(self._init_states))]
+        self.close_door()
+        self.place_bait()
+        return self._current_state
 
     #############################
     # Visualize the environment #
