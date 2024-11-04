@@ -443,6 +443,8 @@ class GridWorld:
         truncated = bool(self._step_count > self.max_step)
 
         state_coord = self._state_list[self._current_state]
+
+        # terminate state
         if self._is_goal_state(state_coord):
             next_init_state = self.reset()
             return next_init_state, self._goal_reward, True, truncated
@@ -456,11 +458,26 @@ class GridWorld:
             next_init_state = self.reset()
             return next_init_state, self.step_reward, True, truncated
 
-        # empty state
+        # empty state/portal state  
         next_state_coord = self._get_next_state(state_coord, action)
         next_state = self._state_list.index(next_state_coord)
+        # inner
         self._current_state = next_state
+        
+        # bait state
+        if self._is_bait_state(next_state_coord):
+            self.bite()
+            return next_state, self._bait_reward, False, truncated
 
+        # door state
+        if self._is_opened:
+            next_state += len(self._state_list)
+
+        # key state
+        if self._is_key_state(next_state_coord):
+            self.open_door()
+        
+        # outer
         return next_state, self.step_reward, False, truncated
 
     def reset(self) -> int:
