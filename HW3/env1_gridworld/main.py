@@ -150,9 +150,9 @@ if __name__ == "__main__":
     test_correctness("tasks/maze.txt")
     # 
     # Write one trajectory to gif
-    # write_gif("tasks/lava.txt", algorithm=PPO)
-    # write_gif("tasks/exit.txt", algorithm=PPO)
-    # write_gif("tasks/bait.txt", algorithm=PPO)
-    # write_gif("tasks/door.txt", algorithm=A2C)
-    # write_gif("tasks/portal.txt", algorithm=PPO)
-    # write_gif("tasks/maze.txt", algorithm=PPO)
+    write_gif("tasks/lava.txt", algorithm=PPO)
+    write_gif("tasks/exit.txt", algorithm=PPO)
+    write_gif("tasks/bait.txt", algorithm=PPO)
+    write_gif("tasks/door.txt", algorithm=A2C)
+    write_gif("tasks/portal.txt", algorithm=PPO)
+    write_gif("tasks/maze.txt", algorithm=PPO)
