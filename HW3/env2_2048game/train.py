@@ -18,14 +18,14 @@ register(
 
 # Set hyper params (configurations) for training
 my_config = {
-    "run_id": "PPO_10_100_5000_newframe_128_128_128_128_nor_p(-100)_t",
+    "run_id": "PPO_10_100_10000_newframe_128_128_128_128_128_nor_p(-100)_t",
 
     "algorithm": PPO,
     "policy_network": "MlpPolicy",
     "save_path": "models/sample_model",
 
     "epoch_num": 100,
-    "timesteps_per_epoch": 5000,
+    "timesteps_per_epoch": 10000,
     "eval_episode_num": 10,
     "learning_rate": 1e-4,
 }
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     # Custom policy kwargs with a larger, deeper MLP
     policy_kwargs = dict(
-        net_arch=[128,128,128,128]
+        net_arch=[128,128,128,128,128]
     )
     
     # Create model from loaded config and train
