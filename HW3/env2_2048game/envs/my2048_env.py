@@ -57,6 +57,7 @@ class My2048Env(gym.Env):
 
         # Foul counts for illegal moves
         self.foul_count = 0
+        self.total = 4
 
         # Members for gym implementation
         self.action_space = spaces.Discrete(4)
@@ -65,7 +66,7 @@ class My2048Env(gym.Env):
         self.observation_space = spaces.Box(0, 1, (layers, self.w, self.h), dtype=int)
         
         # TODO: Set negative reward (penalty) for illegal moves (optional)
-        self.set_illegal_move_reward(0.)
+        self.set_illegal_move_reward(0)
         
         self.set_max_tile(None)
 
@@ -101,7 +102,7 @@ class My2048Env(gym.Env):
         """Perform one step of the game. This involves moving and adding a new tile."""
         logging.debug("Action {}".format(action))
         score = 0
-        done = None
+        done = False
         info = {
             'illegal_move': False,
             'highest': 0,
@@ -116,14 +117,27 @@ class My2048Env(gym.Env):
             self.add_tile()
             done = self.isend()
             reward = float(score)
+            self.foul_count = 0
 
             # TODO: Add reward according to weighted states (optional)
+            # weight = np.array([
+            #         [1.6  , 1.5  , 1.4  , 1.3  ],
+            #         [.9  , 1.0  , 1.1  , 1.2  ],
+            #         [.8  , .7  , .6  , .5  ],
+            #         [.1 , .2  , .3  , .4  ]])
+            
+            # weight = np.array([
+            #         [1.5  , 1.1  , .7  , .3  ],
+            #         [1.4  , 1.0  , .6  , .2  ],
+            #         [1.3  , .9  , .5  , .1  ],
+            #         [1.2 , .8  , .4  , .0  ]])
+            
             weight = np.array([
                     [0  , 0  , 0  , 0  ],
                     [0  , 0  , 0  , 0  ],
                     [0  , 0  , 0  , 0  ],
-                    [0  , 0  , 0  , 0  ]])
-            reward += 0
+                    [0 , 0  , 0  , 0  ]])
+            reward += np.sum(self.Matrix * weight)
             
         except IllegalMove:
             logging.debug("Illegal move")
@@ -131,6 +145,14 @@ class My2048Env(gym.Env):
             reward = self.illegal_move_reward
 
             # TODO: Modify this part for the agent to have a chance to explore other actions (optional)
+            #  # 增加犯規次數
+            # self.foul_count += 1
+
+            # # 若犯規次數超過允許次數，結束遊戲；否則讓代理繼續探索
+            # if self.foul_count > self.total:
+            #     done = True
+            # else:
+            #     done = False  # 允許進一步嘗試動作
             done = True
 
         truncate = False

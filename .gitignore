@@ -1,1 +1,9 @@
 HW3/env1_gridworld/__pycache__/.*
+HW3/env2_2048game/example/PPO_0/*
+/HW3/env2_2048game/wandb/*
+/HW3/env2_2048game/dqn_10_100_10000/DQN_0/*
+/HW3/env2_2048game/a2c_10_100_10000/A2C_0/*
+/HW3/env2_2048game/PPO_10_100_5000_reframe_128_128_nor_p_t/PPO_0/*
+HW3/env2_2048game/DQN_10_100_5000_nor_p_t/*
+HW3/env2_2048game/DQN_10_100_5000_newframe_128_128_128_nor_p_t/*
+HW3/env2_2048game/PPO_10_100_5000_newframe_128_128_128_128_nor_p_t/*

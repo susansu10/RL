@@ -18,14 +18,14 @@ register(
 
 # Set hyper params (configurations) for training
 my_config = {
-    "run_id": "example",
+    "run_id": "PPO_10_100_5000_newframe_128_128_128_128_nor_p_t",
 
     "algorithm": PPO,
     "policy_network": "MlpPolicy",
     "save_path": "models/sample_model",
 
-    "epoch_num": 5,
-    "timesteps_per_epoch": 1000,
+    "epoch_num": 100,
+    "timesteps_per_epoch": 5000,
     "eval_episode_num": 10,
     "learning_rate": 1e-4,
 }
@@ -67,53 +67,59 @@ def train(eval_env, model, config):
         model.learn(
             total_timesteps=config["timesteps_per_epoch"],
             reset_num_timesteps=False,
-            # callback=WandbCallback(
-            #     gradient_save_freq=100,
-            #     verbose=2,
-            # ),
+            callback=WandbCallback(
+                gradient_save_freq=100,
+                verbose=2,
+            ),
         )
 
         ### Evaluation
-        # print(config["run_id"])
-        # print("Epoch: ", epoch)
+        print(config["run_id"])
+        print("Epoch: ", epoch)
         avg_score, avg_highest = eval(eval_env, model, config["eval_episode_num"])
         
-        # print("Avg_score:  ", avg_score)
-        # print("Avg_highest:", avg_highest)
-        # print()
-        # wandb.log(
-        #     {"avg_highest": avg_highest,
-        #      "avg_score": avg_score}
-        # )
+        print("Avg_score:  ", avg_score)
+        print("Avg_highest:", avg_highest)
+        print()
+        wandb.log(
+            {"avg_highest": avg_highest,
+             "avg_score": avg_score}
+        )
         
-
         ### Save best model
         if current_best < avg_score:
             print("Saving Model")
             current_best = avg_score
             save_path = config["save_path"]
             # model.save(f"{save_path}/{epoch}")
+            model.save(f"{save_path}/0")
+            # model.save(f"{save_path}/{str(my_config)}")
 
         # print("---------------")
 
 
 if __name__ == "__main__":
 
-    # Create wandb session (Uncomment to enable wandb logging)
-    # run = wandb.init(
-    #     project="assignment_3",
-    #     config=my_config,
-    #     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-    #     id=my_config["run_id"]
-    # )
+    # Create wandb session (Uncomment to enable `wandb` logging)
+    run = wandb.init(
+        project="assignment_3",
+        config=my_config,
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        id=my_config["run_id"]
+    )
 
     # Create training environment 
-    num_train_envs = 2
+    num_train_envs = 10
     train_env = DummyVecEnv([make_env for _ in range(num_train_envs)])
 
     # Create evaluation environment 
     eval_env = DummyVecEnv([make_env])  
 
+    # Custom policy kwargs with a larger, deeper MLP
+    policy_kwargs = dict(
+        net_arch=[128,128,128,128]
+    )
+    
     # Create model from loaded config and train
     # Note: Set verbose to 0 if you don't want info messages
     model = my_config["algorithm"](
@@ -122,6 +128,10 @@ if __name__ == "__main__":
         verbose=2,
         tensorboard_log=my_config["run_id"],
         learning_rate=my_config["learning_rate"],
+        policy_kwargs=policy_kwargs  # Include custom network architecture
     )
+
+    # load pretained model
+    # model = my_config["algorithm"].load(f"{my_config['save_path']}/A2C_MLP_10_100epoch_10000step_83", env=train_env)
 
     train(eval_env, model, my_config)
