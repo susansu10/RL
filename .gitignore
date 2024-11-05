@@ -7,3 +7,4 @@ HW3/env2_2048game/example/PPO_0/*
 HW3/env2_2048game/DQN_10_100_5000_nor_p_t/*
 HW3/env2_2048game/DQN_10_100_5000_newframe_128_128_128_nor_p_t/*
 HW3/env2_2048game/PPO_10_100_5000_newframe_128_128_128_128_nor_p_t/*
+HW3/env2_2048game/PPO_10_100_5000_newframe_128_128_128_128_nor_p(-100)_t/*

@@ -18,7 +18,7 @@ register(
 
 # Set hyper params (configurations) for training
 my_config = {
-    "run_id": "PPO_10_100_5000_newframe_128_128_128_128_nor_p_t",
+    "run_id": "PPO_10_100_5000_newframe_128_128_128_128_nor_p(-100)_t",
 
     "algorithm": PPO,
     "policy_network": "MlpPolicy",
