@@ -13,3 +13,6 @@ HW3/env2_2048game/PPO_10_100_20000_newframe_128_128_128_128_nor_p(-100)_t/*
 HW3/env2_2048game/PPO_10_100_15000_newframe_128_128_128_128_nor_p(-100)_t/*
 HW3/env2_2048game/PPO_10_100_10000_newframe_256_256_256_256_nor_p(-100)_t/*
 HW3/env2_2048game/PPO_10_100_10000_newframe_128_128_128_128_128_nor_p(-100)_t/*
+HW3/env2_2048game/PPO_10_100_10000_newframe_CNNfeature+MLP_64_128_256_128_64_nor_p(-100)_t/*
+HW3/env2_2048game/PPO_10_100_10000_newframe_CNN1x1feature+MLP_64_64_nor_p(-100)_t/*
+HW3/env2_2048game/A2C_10_100_10000_newframe_128_128_128_128_nor_p(-100)_t/*

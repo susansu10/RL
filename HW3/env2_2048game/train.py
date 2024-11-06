@@ -9,6 +9,33 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from stable_baselines3 import A2C, DQN, PPO, SAC
 
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+import torch
+import torch.nn as nn
+
+class CustomFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space, features_dim=256):
+        super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
+        # 定義 CNN 層，處理 16x4x4 的輸入
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=1, stride=1),  
+            nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1, stride=1),  
+            nn.ReLU(),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=1, stride=1),
+            nn.ReLU(),
+            nn.Flatten()
+        )
+        
+        # 計算 CNN 輸出維度，展平後應該是 128
+        with torch.no_grad():
+            n_flatten = self.cnn(torch.zeros(1, 16, 4, 4)).shape[1]  # 這裡 shape[1] 是展平後的向量大小
+        
+        # 全連接層將輸出調整為指定的 features_dim
+        self.linear = nn.Linear(n_flatten, features_dim)
+
+    def forward(self, observations):
+        return self.linear(self.cnn(observations))
 
 warnings.filterwarnings("ignore")
 register(
@@ -18,9 +45,9 @@ register(
 
 # Set hyper params (configurations) for training
 my_config = {
-    "run_id": "PPO_10_100_10000_newframe_128_128_128_128_128_nor_p(-100)_t",
+    "run_id": "A2C_10_100_10000_newframe_128_128_128_128_nor_p(-100)_t",
 
-    "algorithm": PPO,
+    "algorithm": A2C,
     "policy_network": "MlpPolicy",
     "save_path": "models/sample_model",
 
@@ -117,8 +144,13 @@ if __name__ == "__main__":
 
     # Custom policy kwargs with a larger, deeper MLP
     policy_kwargs = dict(
-        net_arch=[128,128,128,128,128]
+        net_arch=[128,128,128,128]
     )
+    # policy_kwargs = dict(
+    #     features_extractor_class=CustomFeatureExtractor,
+    #     features_extractor_kwargs=dict(features_dim=64),
+    #     net_arch=[64, 64]
+    # )
     
     # Create model from loaded config and train
     # Note: Set verbose to 0 if you don't want info messages

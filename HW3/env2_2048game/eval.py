@@ -56,7 +56,7 @@ if __name__ == "__main__":
     ### Load model with SB3
     # Note: Model can be loaded with arbitrary algorithm class for evaluation
     # (You don't necessarily need to use PPO for training)
-    model = PPO.load(model_path)
+    model = A2C.load(model_path)
     
     eval_num = 100
     score, highest = evaluation(env, model, True, eval_num)
