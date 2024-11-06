@@ -14,30 +14,6 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import torch
 import torch.nn as nn
 
-class CustomFeatureExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space, features_dim=256):
-        super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
-        # 定義 CNN 層，處理 16x4x4 的輸入
-        self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=1, stride=1),  
-            nn.ReLU(),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1, stride=1),  
-            nn.ReLU(),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=1, stride=1),
-            nn.ReLU(),
-            nn.Flatten()
-        )
-        
-        # 計算 CNN 輸出維度，展平後應該是 128
-        with torch.no_grad():
-            n_flatten = self.cnn(torch.zeros(1, 16, 4, 4)).shape[1]  # 這裡 shape[1] 是展平後的向量大小
-        
-        # 全連接層將輸出調整為指定的 features_dim
-        self.linear = nn.Linear(n_flatten, features_dim)
-
-    def forward(self, observations):
-        return self.linear(self.cnn(observations))
-
 warnings.filterwarnings("ignore")
 register(
     id='2048-v0',
@@ -60,10 +36,10 @@ class CustomFeatureExtractor(BaseFeaturesExtractor):
         super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
         # 定義 CNN 層，處理 16x4x4 的輸入
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=2, stride=1),  # 32x3x3
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=2, stride=1, padding=1),  # 32x3x3
             nn.ReLU(),
-            # nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2, stride=1),  # 64x2x2
-            # nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=16, kernel_size=2, stride=1, padding=1),  # 64x2x2
+            nn.ReLU(),
             # nn.Conv2d(in_channels=64, out_channels=128, kernel_size=2, stride=1),  # 128x1x1
             # nn.ReLU(),
             nn.Flatten()
@@ -77,6 +53,7 @@ class CustomFeatureExtractor(BaseFeaturesExtractor):
         self.linear = nn.Linear(n_flatten, features_dim)
 
     def forward(self, observations):
+        # return self.cnn(observations)
         return self.linear(self.cnn(observations))
 
 class DoubleCNNFeatureExtractor(BaseFeaturesExtractor):
@@ -120,16 +97,19 @@ class DoubleCNNFeatureExtractor(BaseFeaturesExtractor):
 
 
 # Set hyper params (configurations) for training
-num_train_envs = 5
+num_train_envs = 10
 # Custom policy kwargs with a larger, deeper MLP
 policy_kwargs = dict(
-    net_arch=[64,64]
+    features_extractor_class=DoubleCNNFeatureExtractor,  # 自定義特徵萃取器
+    features_extractor_kwargs=dict(features_dim=256),  # 特徵輸出維度
+    net_arch=[64]
 )
-epoch_num = 100
-timesteps_per_epoch = 10000
-lr_schedule = LinearLR(initial_value=1e-4, final_value=1e-5, schedule_timesteps=epoch_num * timesteps_per_epoch)
+epoch_num = 500
+timesteps_per_epoch = 20000
+n_steps = 15
+# lr_schedule = LinearLR(initial_value=1e-4, final_value=1e-5, schedule_timesteps=epoch_num * timesteps_per_epoch)
 my_config = {
-    "run_id": "A2C_10_100_10000_newframe_128_128_128_128_nor_p(-100)_t",
+    "run_id": f"A2C_{num_train_envs}_{epoch_num}_{timesteps_per_epoch}_newframe_DCNN_64_p(-100)_cnt3_weight_high_lr",
 
     "algorithm": A2C,
     "policy_network": "MlpPolicy",
@@ -138,7 +118,10 @@ my_config = {
     "epoch_num": epoch_num,
     "timesteps_per_epoch": timesteps_per_epoch,
     "eval_episode_num": 10,
-    "learning_rate": lr_schedule,
+    "learning_rate": 1e-4,
+    "n_steps": n_steps,
+    # "vf_coef": 0.25,
+    # "gamma": 0.95,
 }
 
 def make_env():
@@ -179,7 +162,7 @@ def train(eval_env, model, config):
             reset_num_timesteps=False,
             callback=WandbCallback(
                 gradient_save_freq=100,
-                verbose=2,
+                verbose=1,
             ),
         )
 
@@ -197,9 +180,9 @@ def train(eval_env, model, config):
         )
         
         ### Save best model
-        if current_best < avg_score:
+        if current_best < avg_highest:
             print("Saving Model")
-            current_best = avg_score
+            current_best = avg_highest
             save_path = config["save_path"]
             # model.save(f"{save_path}/{epoch}")
             model.save(f"{save_path}/1")
@@ -215,7 +198,7 @@ if __name__ == "__main__":
         project="assignment_3",
         config=my_config,
         sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-        id=my_config["run_id"]
+        id=my_config["run_id"],
     )
 
     # Create training environment 
@@ -224,28 +207,26 @@ if __name__ == "__main__":
     # Create evaluation environment 
     eval_env = DummyVecEnv([make_env])  
 
-    # Custom policy kwargs with a larger, deeper MLP
-    policy_kwargs = dict(
-        net_arch=[128,128,128,128]
-    )
-    # policy_kwargs = dict(
-    #     features_extractor_class=CustomFeatureExtractor,
-    #     features_extractor_kwargs=dict(features_dim=64),
-    #     net_arch=[64, 64]
-    # )
-    
     # Create model from loaded config and train
     # Note: Set verbose to 0 if you don't want info messages
     model = my_config["algorithm"](
         my_config["policy_network"], 
         train_env, 
-        verbose=2,
+        verbose=1,
         tensorboard_log=my_config["run_id"],
         learning_rate=my_config["learning_rate"],
+        n_steps = my_config["n_steps"],
+        # vf_coef = my_config["vf_coef"],
+        # gamma = my_config["gamma"],
         policy_kwargs=policy_kwargs  # Include custom network architecture
     )
 
     # load pretained model
-    # model = my_config["algorithm"].load(f"{my_config['save_path']}/A2C_MLP_10_100epoch_10000step_83", env=train_env)
+    # model = my_config["algorithm"].load(f"{my_config['save_path']}/A2C_10_100_20000_newframe_CNN_128_128_128_128_p(-100)_cnt3_weight_high_281", env=train_env)
+    # model.n_steps = my_config["n_steps"]
+    # model.vf_coef = my_config["vf_coef"]
+    # model.gamma = my_config["gamma"]
+    # model.learning_rate = my_config["learning_rate"]
+    # print(f"Model loaded. Current learning rate: {model.learning_rate}")
 
     train(eval_env, model, my_config)
