@@ -1,6 +1,7 @@
 import warnings
 import gymnasium as gym
 from gymnasium.envs.registration import register
+import numpy as np
 
 import wandb
 from wandb.integration.sb3 import WandbCallback
@@ -43,7 +44,90 @@ register(
     entry_point='envs:My2048Env'
 )
 
+class LinearLR:
+    def __init__(self, initial_value, final_value, schedule_timesteps):
+        self.initial_value = initial_value
+        self.final_value = final_value
+        self.schedule_timesteps = schedule_timesteps
+
+    def __call__(self, progress):
+        # progress: The current training progress (0.0 to 1.0)
+        lr = self.initial_value + progress * (self.final_value - self.initial_value)
+        return lr
+
+class CustomFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space, features_dim=256):
+        super(CustomFeatureExtractor, self).__init__(observation_space, features_dim)
+        # 定義 CNN 層，處理 16x4x4 的輸入
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=2, stride=1),  # 32x3x3
+            nn.ReLU(),
+            # nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2, stride=1),  # 64x2x2
+            # nn.ReLU(),
+            # nn.Conv2d(in_channels=64, out_channels=128, kernel_size=2, stride=1),  # 128x1x1
+            # nn.ReLU(),
+            nn.Flatten()
+        )
+        
+        # 計算 CNN 輸出維度，展平後應該是 128
+        with torch.no_grad():
+            n_flatten = self.cnn(torch.zeros(1, 16, 4, 4)).shape[1]  # 這裡 shape[1] 是展平後的向量大小
+        
+        # 全連接層將輸出調整為指定的 features_dim
+        self.linear = nn.Linear(n_flatten, features_dim)
+
+    def forward(self, observations):
+        return self.linear(self.cnn(observations))
+
+class DoubleCNNFeatureExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space, features_dim: int = 256):
+        super(DoubleCNNFeatureExtractor, self).__init__(observation_space, features_dim)
+        n_input_channels = observation_space.shape[0]  # Should be 16 (input channels)
+        
+        # First branch of convolutions
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(n_input_channels, 128, kernel_size=(1, 2), stride=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=(4, 3), stride=1),
+            nn.ReLU()
+        )
+        
+        # Second branch of convolutions
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(n_input_channels, 128, kernel_size=(3, 4), stride=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=(2, 4), stride=1),
+            nn.ReLU()
+        )
+        
+        # Linear layers (fully connected)
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(128 * 2 * 128, features_dim),  # Adjust based on final flattened size
+            nn.ReLU(),
+        )
+
+    def forward(self, observations):
+        # Apply the two convolutional branches
+        conv1_out = self.conv1(observations)
+        conv2_out = self.conv2(observations)
+        
+        # Concatenate the outputs
+        concat_out = torch.cat((conv1_out, conv2_out), dim=1)  # Concatenate along the channel axis
+        
+        # Pass through fully connected layers
+        return self.fc(concat_out)
+
+
 # Set hyper params (configurations) for training
+num_train_envs = 5
+# Custom policy kwargs with a larger, deeper MLP
+policy_kwargs = dict(
+    net_arch=[64,64]
+)
+epoch_num = 100
+timesteps_per_epoch = 10000
+lr_schedule = LinearLR(initial_value=1e-4, final_value=1e-5, schedule_timesteps=epoch_num * timesteps_per_epoch)
 my_config = {
     "run_id": "A2C_10_100_10000_newframe_128_128_128_128_nor_p(-100)_t",
 
@@ -51,12 +135,11 @@ my_config = {
     "policy_network": "MlpPolicy",
     "save_path": "models/sample_model",
 
-    "epoch_num": 100,
-    "timesteps_per_epoch": 10000,
+    "epoch_num": epoch_num,
+    "timesteps_per_epoch": timesteps_per_epoch,
     "eval_episode_num": 10,
-    "learning_rate": 1e-4,
+    "learning_rate": lr_schedule,
 }
-
 
 def make_env():
     env = gym.make('2048-v0')
@@ -119,7 +202,7 @@ def train(eval_env, model, config):
             current_best = avg_score
             save_path = config["save_path"]
             # model.save(f"{save_path}/{epoch}")
-            model.save(f"{save_path}/0")
+            model.save(f"{save_path}/1")
             # model.save(f"{save_path}/{str(my_config)}")
 
         # print("---------------")
@@ -136,7 +219,6 @@ if __name__ == "__main__":
     )
 
     # Create training environment 
-    num_train_envs = 10
     train_env = DummyVecEnv([make_env for _ in range(num_train_envs)])
 
     # Create evaluation environment 
