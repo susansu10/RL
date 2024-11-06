@@ -9,7 +9,6 @@ from wandb.integration.sb3 import WandbCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from stable_baselines3 import A2C, DQN, PPO, SAC
-from stable_baselines3.common.schedules import LinearSchedule
 
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import torch
@@ -20,6 +19,17 @@ register(
     id='2048-v0',
     entry_point='envs:My2048Env'
 )
+
+class LinearLR:
+    def __init__(self, initial_value, final_value, schedule_timesteps):
+        self.initial_value = initial_value
+        self.final_value = final_value
+        self.schedule_timesteps = schedule_timesteps
+
+    def __call__(self, progress):
+        # progress: The current training progress (0.0 to 1.0)
+        lr = self.initial_value + progress * (self.final_value - self.initial_value)
+        return lr
 
 class CustomFeatureExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space, features_dim=256):
@@ -93,7 +103,7 @@ policy_kwargs = dict(
 )
 epoch_num = 100
 timesteps_per_epoch = 10000
-lr_schedule = LinearSchedule(initial_value=1e-4, final_value=1e-5, schedule_timesteps=epoch_num * timesteps_per_epoch)
+lr_schedule = LinearLR(initial_value=1e-4, final_value=1e-5, schedule_timesteps=epoch_num * timesteps_per_epoch)
 my_config = {
     "run_id": f"PPO_{num_train_envs}_{epoch_num}_{timesteps_per_epoch}_newframe_64_64_nop_weight2_lr",
 
