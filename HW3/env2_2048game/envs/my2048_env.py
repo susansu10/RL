@@ -57,7 +57,7 @@ class My2048Env(gym.Env):
 
         # Foul counts for illegal moves
         self.foul_count = 0
-        self.total = 4
+        self.total = 3
 
         # Members for gym implementation
         self.action_space = spaces.Discrete(4)
@@ -67,6 +67,7 @@ class My2048Env(gym.Env):
         
         # TODO: Set negative reward (penalty) for illegal moves (optional)
         self.set_illegal_move_reward(-100)
+        # self.set_illegal_move_reward(0)
         
         self.set_max_tile(None)
 
@@ -108,6 +109,7 @@ class My2048Env(gym.Env):
             'highest': 0,
             'score': 0,
         }
+        prevHigh = self.highest()
         try:
             # assert info['illegal_move'] == False
             pre_state = self.Matrix.copy()
@@ -120,44 +122,40 @@ class My2048Env(gym.Env):
             self.foul_count = 0
 
             # TODO: Add reward according to weighted states (optional)
-            # weight = np.array([
-            #         [1.6  , 1.5  , 1.4  , 1.3  ],
-            #         [.9  , 1.0  , 1.1  , 1.2  ],
-            #         [.8  , .7  , .6  , .5  ],
-            #         [.1 , .2  , .3  , .4  ]])
             
             # weight = np.array([
-            #         [1.5  , 1.1  , .7  , .3  ],
-            #         [1.4  , 1.0  , .6  , .2  ],
-            #         [1.3  , .9  , .5  , .1  ],
-            #         [1.2 , .8  , .4  , .0  ]])
-            
+            #         [0.13  , 0.12  , 0.1  , 0.9  ],
+            #         [0.9  , 0.08  , 0.07  , 0.07  ],
+            #         [0.06  , 0.05 , 0.03  , 0.01  ],
+            #         [0.01 , 0.009  , 0.005  , 0.003  ]])
             weight = np.array([
-                    [0  , 0  , 0  , 0  ],
-                    [0  , 0  , 0  , 0  ],
-                    [0  , 0  , 0  , 0  ],
-                    [0 , 0  , 0  , 0  ]])
-            reward += np.sum(self.Matrix * weight)
+                    [7 , 6 , 5 , 4 ],
+                    [6 , 5 , 4 , 3 ],
+                    [5 , 4 , 3 , 2 ],
+                    [4 , 3 , 2 , 1 ]])
+            reward += np.log1p(np.sum(self.Matrix * weight))
             
         except IllegalMove:
             logging.debug("Illegal move")
             info['illegal_move'] = True
             reward = self.illegal_move_reward
+            # done = True
 
             # TODO: Modify this part for the agent to have a chance to explore other actions (optional)
             #  # 增加犯規次數
-            # self.foul_count += 1
-
+            self.foul_count += 1
             # # 若犯規次數超過允許次數，結束遊戲；否則讓代理繼續探索
-            # if self.foul_count > self.total:
-            #     done = True
-            # else:
-            #     done = False  # 允許進一步嘗試動作
-            done = True
+            if self.foul_count > self.total:
+                done = True
+            else:
+                done = False  # 允許進一步嘗試動作
 
         truncate = False
         info['highest'] = self.highest()
         info['score']   = self.score
+
+        # if get higher, reward
+        reward += info['highest'] - prevHigh
 
         # Return observation (board state), reward, done, truncate and info dict
         return stack(self.Matrix), reward, done, truncate, info
