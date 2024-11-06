@@ -16,3 +16,5 @@ HW3/env2_2048game/PPO_10_100_10000_newframe_128_128_128_128_128_nor_p(-100)_t/*
 HW3/env2_2048game/PPO_10_100_10000_newframe_CNNfeature+MLP_64_128_256_128_64_nor_p(-100)_t/*
 HW3/env2_2048game/PPO_10_100_10000_newframe_CNN1x1feature+MLP_64_64_nor_p(-100)_t/*
 HW3/env2_2048game/A2C_10_100_10000_newframe_128_128_128_128_nor_p(-100)_t/*
+HW3/env3_lunar_lander/LunarLander-v2_A2C_10_100_5000_newframe_128_128_128_128/A2C_0/*
+HW3/env3_lunar_lander/wandb/run-20241106_201202-LunarLander-v2_A2C_10_100_5000_newframe_128_128_128_128/*
